@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f0">
+  <meta name="description" content="A research project on enhancing 3D Gaussian splatting render sequences with few-step video differential diffusion.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Quality Enhancement for 3D Gaussian Splatting via Few-Step Video Differential Diffusion Model">
+  <meta property="og:description" content="Project overview and an interactive illustration of 3D Gaussian splatting enhancement.">
+  <meta property="og:url" content="https://minglangqiao.github.io/gsqe-project">
+  <meta property="og:image" content="https://minglangqiao.github.io/gsqe-project/mediterranean-garden.webp">
+  <title>Quality Enhancement for 3D Gaussian Splatting via Few-Step Video Differential Diffusion Model</title>
+  <link rel="preload" href="mediterranean-garden.webp" as="image" type="image/webp">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="comparison.js"></script>
+</head>
+<body id="top">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top" aria-label="GSQE, back to top">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>GSQE</span>
+      </a>
+      <nav aria-label="Project sections">
+        <a href="#overview">Overview</a>
+        <a href="#method">Method</a>
+        <a href="#comparison">Comparison</a>
+        <a href="#resources">Resources</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <header class="container hero">
+      <h1>
+        <span class="title-main">Quality Enhancement for <span>3D Gaussian Splatting</span></span>
+        <span class="title-subtitle">via Few-Step Video Differential Diffusion Model</span>
+      </h1>
+      <p>Video diffusion for higher-quality novel-view render sequences.</p>
+      <div class="hero-links">
+        <a class="button button-primary" href="#comparison">Explore comparison <span aria-hidden="true">↓</span></a>
+        <a class="button button-secondary" href="#method">View method <span aria-hidden="true">↘</span></a>
+      </div>
+    </header>
+
+    <section id="comparison" class="container comparison" aria-labelledby="comparison-heading">
+      <div class="comparison-heading">
+        <h2 id="comparison-heading">Illustrative comparison</h2>
+        <p id="comparison-instructions">Drag the divider to compare</p>
+      </div>
+      <figure>
+        <div class="comparison-image" data-view="scene">
+          <div class="comparison-base" aria-hidden="true"></div>
+          <div class="comparison-sharp" aria-hidden="true"></div>
+          <span class="image-label image-label-start" aria-hidden="true">Simulated input</span>
+          <span class="image-label image-label-end" aria-hidden="true">Detail reference</span>
+          <div class="divider" aria-hidden="true"><span class="divider-handle"></span></div>
+          <input id="split" class="split-control" type="range" min="0" max="100" value="48"
+                 aria-label="Reveal simulated input" aria-describedby="comparison-instructions comparison-caption"
+                 aria-valuetext="48% simulated input, 52% detail reference">
+        </div>
+        <figcaption class="comparison-footer">
+          <span id="comparison-caption">AI-generated garden scene with simulated blur on the input side.</span>
+          <fieldset class="view-controls" aria-label="Comparison crop">
+            <label><input type="radio" name="view" value="scene" checked><span>Full scene</span></label>
+            <label><input type="radio" name="view" value="stone"><span>Stonework</span></label>
+            <label><input type="radio" name="view" value="foliage"><span>Foliage</span></label>
+          </fieldset>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section id="overview" class="container content-section section-split" aria-labelledby="overview-heading">
+      <h2 id="overview-heading">Overview</h2>
+      <div class="section-copy">
+        <p>3D Gaussian Splatting renders novel views of a reconstructed scene. Along a camera path, fine textures can appear soft and artifacts can vary from frame to frame.</p>
+        <p>This project investigates few-step video differential diffusion for enhancing sequences of 3DGS renders. The research question is whether a short denoising process can restore visual detail while keeping adjacent views consistent.</p>
+      </div>
+    </section>
+
+    <section id="method" class="container content-section" aria-labelledby="method-heading">
+      <div class="section-split method-header">
+        <h2 id="method-heading">Method</h2>
+        <p class="section-copy">The conceptual workflow treats consecutive renders along a camera path as a single clip for enhancement.</p>
+      </div>
+      <ol class="pipeline" aria-label="Conceptual workflow">
+        <li>
+          <div class="pipeline-visual pipeline-input" aria-hidden="true"><div class="frame-stack"></div></div>
+          <div class="pipeline-text"><h3>3DGS render sequence</h3><p>Render consecutive novel views along a camera path.</p></div>
+        </li>
+        <li>
+          <div class="pipeline-visual pipeline-diffusion" aria-hidden="true">
+            <div class="diffusion-flow"><span></span><span></span><span></span></div>
+          </div>
+          <div class="pipeline-text"><h3>Few-step differential diffusion</h3><p>Apply video diffusion to refine the render sequence.</p></div>
+        </li>
+        <li>
+          <div class="pipeline-visual pipeline-output" aria-hidden="true"><div class="frame-stack"></div></div>
+          <div class="pipeline-text"><h3>Enhanced render sequence</h3><p>Inspect frame detail and consistency as the viewpoint changes.</p></div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="resources" class="container content-section section-split resources" aria-labelledby="resources-heading">
+      <h2 id="resources-heading">Resources</h2>
+      <ul class="resource-list">
+        <li><span>Paper and citation</span><small>Awaiting materials</small></li>
+        <li><span>Research code</span><small>Awaiting materials</small></li>
+        <li><span>Experimental videos</span><small>Awaiting materials</small></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>GSQE project page</span>
+      <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
+    </div>
+  </footer>
+</body>
+</html>
