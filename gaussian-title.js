@@ -7,7 +7,7 @@
   if (!context) return;
 
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
-  const palette = [[34, 43, 31], [52, 69, 43], [72, 91, 53], [113, 123, 67], [57, 111, 90], [90, 144, 133]];
+  const palette = [[37, 55, 49], [52, 75, 65], [75, 112, 91], [134, 137, 82], [66, 128, 119], [76, 142, 150]];
   const sprites = palette.map(color => {
     const sprite = document.createElement('canvas');
     sprite.width = sprite.height = 48;
@@ -21,31 +21,21 @@
     brush.fillRect(0, 0, 48, 48);
     return sprite;
   });
-  // Larger splats use a shaded translucent core so their ellipsoid volume reads clearly.
-  const volumeSprites = palette.map((color, index) => {
+  // Matte, anisotropic splats: soft color falloff without glassy highlights or rings.
+  const splatPalette = [[108, 150, 126], [78, 144, 153], [155, 175, 126], [191, 160, 105]];
+  const volumeSprites = splatPalette.map(color => {
     const sprite = document.createElement('canvas');
     sprite.width = sprite.height = 64;
     const brush = sprite.getContext('2d');
-    brush.globalAlpha = .72;
-    brush.drawImage(sprites[index], 0, 0, 64, 64);
-    brush.globalAlpha = 1;
-    const surface = brush.createRadialGradient(26, 24, 1, 32, 32, 20);
-    surface.addColorStop(0, 'rgba(249,253,233,.92)');
-    surface.addColorStop(.2, 'rgba(232,243,204,.55)');
-    surface.addColorStop(.46, `rgba(${color},.17)`);
-    surface.addColorStop(.83, `rgba(${color},.52)`);
-    surface.addColorStop(1, `rgba(${color},.12)`);
+    const tint = color.map(channel => Math.round(channel * .83 + 247 * .17));
+    const surface = brush.createRadialGradient(27, 27, 0, 32, 32, 31);
+    surface.addColorStop(0, `rgba(${tint},.86)`);
+    surface.addColorStop(.24, `rgba(${color},.82)`);
+    surface.addColorStop(.5, `rgba(${color},.58)`);
+    surface.addColorStop(.74, `rgba(${color},.2)`);
+    surface.addColorStop(1, `rgba(${color},0)`);
     brush.fillStyle = surface;
-    brush.beginPath();
-    brush.arc(32, 32, 20, 0, Math.PI * 2);
-    brush.fill();
-    brush.strokeStyle = `rgba(${color},.42)`;
-    brush.lineWidth = 1;
-    brush.stroke();
-    brush.strokeStyle = `rgba(${color},.12)`;
-    brush.beginPath();
-    brush.arc(32, 32, 25, 0, Math.PI * 2);
-    brush.stroke();
+    brush.fillRect(0, 0, 64, 64);
     return sprite;
   });
 
@@ -134,7 +124,7 @@
         presence * opacity * texture * (.69 + p.depth * .24) * (1 - localDamage * .83));
       if (p.coarse && localDamage > .015) {
         splat(x, y, p.radius * (1 + localDamage * (2.8 + p.depth * 1.2)),
-          .66 + p.depth * .26, angle, p.color,
+          .38 + p.depth * .18, angle, p.splatColor,
           Math.pow(localDamage, .85) * (.74 + p.depth * .15), true);
       }
     }
@@ -142,7 +132,7 @@
     // Detached floaters and duplicated fragments disappear as support improves.
     for (const p of floaters) {
       splat(p.x + p.dx * damage, p.y + p.dy * damage,
-        p.radius * (1 + damage), .72, p.angle, p.color, damage * damage * .4, true);
+        p.radius * (1 + damage), .34 + p.depth * .18, p.angle, p.splatColor, damage * damage * .4, true);
     }
     if (progress < 1) requestDraw();
   }
@@ -184,12 +174,12 @@
       const box = label.getBoundingClientRect();
       const gradient = brush.createLinearGradient(box.left - bounds.left, 0, box.right - bounds.left, 0);
       if (label.classList.contains('gaussian-word')) {
-        gradient.addColorStop(0, '#717b43');
-        gradient.addColorStop(.5, '#485b35');
-        gradient.addColorStop(1, '#396f5a');
+        gradient.addColorStop(0, '#8e8954');
+        gradient.addColorStop(.5, '#51856c');
+        gradient.addColorStop(1, '#478f96');
       } else {
-        gradient.addColorStop(0, '#222b1f');
-        gradient.addColorStop(1, label.classList.contains('title-phrase') ? '#485b35' : '#34452b');
+        gradient.addColorStop(0, '#263b37');
+        gradient.addColorStop(1, label.classList.contains('title-phrase') ? '#52786a' : '#344b41');
       }
       brush.fillStyle = gradient;
       const text = label.firstChild;
@@ -249,7 +239,8 @@
           if (d < distance) { color = index; distance = d; }
         });
         const p = {
-          x, y, color, damage: localDamage, coarse: random(i + 103) < .14,
+          x, y, color, damage: localDamage, coarse: random(i + 103) < .12,
+          splatColor: random(tile + 117) < .15 ? 3 : Math.floor(random(tile + 119) * 3),
           birth: initiallyVisible ? 0 : .04 + random(tile + 19) * .36 + random(i + 14) * .24 + localDamage * .12,
           radius: spacing * (1.1 + random(i + 2) * .3),
           depth: random(i + 5),
