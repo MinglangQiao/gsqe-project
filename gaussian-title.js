@@ -4,7 +4,8 @@ const label = title.querySelector('.gaussian-title-label');
 const canvas = title.querySelector('canvas');
 const context = canvas.getContext('2d');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const palette = ['160,139,60', '123,151,73', '72,115,57', '58,136,108', '87,154,156'];
+const palette = ['160,139,60', '123,151,73', '72,115,57', '58,136,108', '87,154,156',
+  '158,144,117', '139,148,114', '124,145,123', '130,151,140', '148,157,145'];
 
 if (context) {
   const sprites = palette.map(color => {
@@ -29,6 +30,9 @@ if (context) {
   let frame = 0;
   let animationStarted = 0;
   let clarity = reducedMotion.matches ? 1 : 0;
+  let labelBottom = 0;
+  let labelMiddle = 0;
+  let labelWidth = 0;
 
   function randomAt(index) {
     const value = Math.sin(index * 127.1 + 311.7) * 43758.5453;
@@ -79,30 +83,52 @@ if (context) {
     clarity = reducedMotion.matches ? 1 : 1 - Math.pow(1 - progress, 3);
     title.style.setProperty('--clarity', clarity);
     context.clearRect(0, 0, width, height);
-    const narrow = width < 650;
-    const size = narrow ? 31 : 77;
+    const narrow = window.matchMedia('(max-width: 680px)').matches;
+    const size = narrow ? Math.min(44, width * .12) : Math.min(76, Math.max(40, (width - labelWidth) * .16));
     const centers = [
-      { x: narrow ? 29 : 110, y: height * .44, color: 0 },
-      { x: width - (narrow ? 27 : 106), y: height * .59, color: 4 }
+      { x: narrow ? width * .25 : 88, y: narrow ? labelBottom + 54 : labelMiddle },
+      { x: narrow ? width * .75 : width - 88, y: narrow ? labelBottom + 54 : labelMiddle }
     ];
 
-    // Differently oriented ellipsoids suggest a small volumetric splat cloud.
+    // Both sides depict the same ring. The left keeps broad, displaced splats;
+    // the right resolves their positions and support into a coherent surface.
+    // This is an illustrative quality metaphor, not a model output.
     centers.forEach((center, side) => {
-      for (let i = 0; i < 5; i++) {
-        const seed = i + side * 13;
-        const phase = i * 2.4;
-        const depth = randomAt(seed + 61);
-        const spread = 1 + (1 - clarity) * 1.2;
-        const x = center.x + Math.cos(phase) * size * .47 * spread + pointer.x * depth * 12;
-        const y = center.y + Math.sin(phase) * size * .45 * spread + pointer.y * depth * 8;
-        drawSplat(x, y, size * (.64 + depth * .36), .46 + depth * .4,
-          phase * .67, (center.color + i % 3) % palette.length, .66 + depth * .2, true);
+      const quality = side === 0 ? 0 : clarity;
+      const disorder = 1 - quality;
+      context.save();
+      context.fillStyle = 'rgba(80,100,66,.055)';
+      context.beginPath();
+      context.ellipse(center.x, center.y + size * .7, size * .7, size * .085, 0, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+      const ring = Array.from({ length: 16 }, (_, i) => {
+        const angle = i / 16 * Math.PI * 2;
+        return { i, angle, depth: Math.sin(angle) };
+      }).sort((a, b) => a.depth - b.depth);
+      for (const { i, angle, depth } of ring) {
+        const x = center.x + (Math.cos(angle) * .66 + Math.sin(angle) * .19) * size
+          + (randomAt(i + 87) - .5) * size * .3 * disorder + pointer.x * depth * 3;
+        const y = center.y + Math.sin(angle) * size * .45
+          + (randomAt(i + 116) - .5) * size * .26 * disorder + pointer.y * depth * 2;
+        const tangent = Math.atan2(.45 * Math.cos(angle), -.66 * Math.sin(angle) + .19 * Math.cos(angle));
+        const radius = size * (.33 + disorder * (.17 + randomAt(i + 51) * .09));
+        const color = Math.floor(i / 16 * 5);
+        context.save();
+        if (disorder > .05) context.filter = `blur(${disorder * (narrow ? .8 : 1.3)}px)`;
+        drawSplat(x, y, radius, .67 + disorder * .2,
+          tangent + disorder * (randomAt(i + 62) - .5) * 2,
+          quality > .55 ? color : color + 5, .6 + quality * .3, quality > .65);
+        context.restore();
       }
-      for (let i = 0; i < 13; i++) {
-        const seed = i + side * 19;
-        const x = center.x + (randomAt(seed + 87) - .5) * size * 3.2;
-        const y = center.y + (randomAt(seed + 116) - .5) * size * 2.15;
-        drawSplat(x, y, 2 + randomAt(seed + 8) * 5, .55, i, center.color, .48);
+      // Floaters disappear only on the enhanced side.
+      for (let i = 0; i < 16 && disorder > .01; i++) {
+        const angle = i * 2.4;
+        const distance = size * (1 + randomAt(i + 34) * .35);
+        drawSplat(center.x + Math.cos(angle) * distance,
+          center.y + Math.sin(angle) * distance * .68,
+          size * (.045 + randomAt(i + 8) * .07) * disorder,
+          .45 + randomAt(i + 45) * .4, i, 5 + i % 5, .65 * disorder);
       }
     });
 
@@ -124,6 +150,10 @@ if (context) {
 
   function rebuild() {
     const bounds = canvas.getBoundingClientRect();
+    const labelBounds = label.getBoundingClientRect();
+    labelBottom = labelBounds.bottom - bounds.top;
+    labelMiddle = (labelBounds.top + labelBounds.bottom) / 2 - bounds.top;
+    labelWidth = labelBounds.width;
     width = bounds.width;
     height = bounds.height;
     const scale = Math.min(window.devicePixelRatio || 1, 2);
@@ -180,7 +210,7 @@ if (context) {
           radius: spacing * (1.35 + randomAt(seed + 73) * .8),
           ratio: .55 + randomAt(seed + 9) * .35,
           angle: randomAt(seed + 99) * Math.PI,
-          color: Math.min(palette.length - 1, Math.floor(x / width * palette.length))
+          color: Math.min(4, Math.floor(x / width * 5))
         });
       }
     }
