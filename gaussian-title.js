@@ -6,6 +6,24 @@ const context = canvas.getContext('2d');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const palette = ['160,139,60', '123,151,73', '72,115,57', '58,136,108', '87,154,156'];
 
+// A clarity sweep makes the enhancement phrase illustrate its own meaning.
+const enhancementTitle = document.querySelector('.enhancement-title');
+if (enhancementTitle) {
+  const replayEnhancement = () => {
+    if (!reducedMotion.matches) enhancementTitle.classList.add('is-enhancing');
+  };
+  document.fonts.ready.then(replayEnhancement);
+  enhancementTitle.addEventListener('pointerenter', event => {
+    if (event.pointerType !== 'touch') replayEnhancement();
+  });
+  enhancementTitle.addEventListener('animationend', event => {
+    if (event.animationName === 'enhancement-sweep') enhancementTitle.classList.remove('is-enhancing');
+  });
+  reducedMotion.addEventListener('change', () => {
+    if (reducedMotion.matches) enhancementTitle.classList.remove('is-enhancing');
+  });
+}
+
 if (context) {
   const sprites = palette.map(color => {
     const sprite = document.createElement('canvas');
