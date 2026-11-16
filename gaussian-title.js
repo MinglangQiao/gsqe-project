@@ -33,7 +33,7 @@
   let progress = 0;
   let initialized = false;
   let hiddenAt = 0;
-  const duration = 3500;
+  const duration = 2500;
   const pointer = { x: 0, y: 0 };
   const random = seed => {
     const n = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
