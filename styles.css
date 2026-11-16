@@ -77,8 +77,8 @@ h1, h2, h3, p, figure { margin: 0; }
 }
 .reconstruction-title { position: relative; isolation: isolate; }
 .title-phrase, .gaussian-word { display: inline-block; white-space: nowrap; vertical-align: baseline; }
-.title-phrase { background: linear-gradient(105deg, #242c23, #537357); }
-.gaussian-word { background: linear-gradient(105deg, #6d7132, #435e38 43%, #3b6c5d); }
+.title-phrase { background: linear-gradient(105deg, #263b37, #52786a); }
+.gaussian-word { background: linear-gradient(105deg, #8e8954, #51856c 50%, #478f96); }
 .title-phrase, .gaussian-word { background-clip: text; -webkit-background-clip: text; color: transparent; }
 .reconstruction-title.splats-ready .title-main,
 .reconstruction-title.splats-ready .title-subtitle { opacity: var(--type-opacity, 1); }
