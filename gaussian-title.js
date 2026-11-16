@@ -21,6 +21,33 @@
     brush.fillRect(0, 0, 48, 48);
     return sprite;
   });
+  // Larger splats use a shaded translucent core so their ellipsoid volume reads clearly.
+  const volumeSprites = palette.map((color, index) => {
+    const sprite = document.createElement('canvas');
+    sprite.width = sprite.height = 64;
+    const brush = sprite.getContext('2d');
+    brush.globalAlpha = .72;
+    brush.drawImage(sprites[index], 0, 0, 64, 64);
+    brush.globalAlpha = 1;
+    const surface = brush.createRadialGradient(26, 24, 1, 32, 32, 20);
+    surface.addColorStop(0, 'rgba(249,253,233,.92)');
+    surface.addColorStop(.2, 'rgba(232,243,204,.55)');
+    surface.addColorStop(.46, `rgba(${color},.17)`);
+    surface.addColorStop(.83, `rgba(${color},.52)`);
+    surface.addColorStop(1, `rgba(${color},.12)`);
+    brush.fillStyle = surface;
+    brush.beginPath();
+    brush.arc(32, 32, 20, 0, Math.PI * 2);
+    brush.fill();
+    brush.strokeStyle = `rgba(${color},.42)`;
+    brush.lineWidth = 1;
+    brush.stroke();
+    brush.strokeStyle = `rgba(${color},.12)`;
+    brush.beginPath();
+    brush.arc(32, 32, 25, 0, Math.PI * 2);
+    brush.stroke();
+    return sprite;
+  });
 
   let particles = [];
   let floaters = [];
@@ -57,13 +84,13 @@
     return smooth(.42, .64, mix(a, b, ty));
   };
 
-  function splat(x, y, radius, ratio, angle, color, opacity) {
+  function splat(x, y, radius, ratio, angle, color, opacity, volume = false) {
     if (opacity < .012) return;
     context.save();
     context.translate(x, y);
     context.rotate(angle);
     context.globalAlpha = opacity;
-    context.drawImage(sprites[color], -radius, -radius * ratio, radius * 2, radius * 2 * ratio);
+    context.drawImage((volume ? volumeSprites : sprites)[color], -radius, -radius * ratio, radius * 2, radius * 2 * ratio);
     context.restore();
   }
 
@@ -100,17 +127,22 @@
       const depthShift = p.depth * (motion.matches ? 0 : .4 + localDamage);
       const x = p.x + (p.fragmentX + p.jitterX) * displacement + pointer.x * depthShift;
       const y = p.y + (p.fragmentY + p.jitterY) * displacement + pointer.y * depthShift * .6;
-      const radius = p.radius * (1 + localDamage * (.9 + p.depth * 1.2));
+      const radius = p.radius * (1 + localDamage * .7);
       const angle = p.angle * localDamage + p.tangent * (1 - localDamage);
       const texture = 1 - damage * .85 * (1 - p.damage);
-      splat(x, y, radius, .72 - localDamage * .25, angle, p.color,
-        presence * opacity * texture * (.69 + p.depth * .24));
+      splat(x, y, radius, .72 - localDamage * .08, angle, p.color,
+        presence * opacity * texture * (.69 + p.depth * .24) * (1 - localDamage * .83));
+      if (p.coarse && localDamage > .015) {
+        splat(x, y, p.radius * (1 + localDamage * (2.8 + p.depth * 1.2)),
+          .66 + p.depth * .26, angle, p.color,
+          Math.pow(localDamage, .85) * (.74 + p.depth * .15), true);
+      }
     }
 
     // Detached floaters and duplicated fragments disappear as support improves.
     for (const p of floaters) {
       splat(p.x + p.dx * damage, p.y + p.dy * damage,
-        p.radius * (1 + damage), .36, p.angle, p.color, damage * damage * .32);
+        p.radius * (1 + damage), .72, p.angle, p.color, damage * damage * .4, true);
     }
     if (progress < 1) requestDraw();
   }
@@ -217,7 +249,7 @@
           if (d < distance) { color = index; distance = d; }
         });
         const p = {
-          x, y, color, damage: localDamage,
+          x, y, color, damage: localDamage, coarse: random(i + 103) < .14,
           birth: initiallyVisible ? 0 : .04 + random(tile + 19) * .36 + random(i + 14) * .24 + localDamage * .12,
           radius: spacing * (1.1 + random(i + 2) * .3),
           depth: random(i + 5),
@@ -232,7 +264,7 @@
         if (localDamage > .6 && random(i + 80) < .012) floaters.push({ ...p,
           dx: (random(i + 90) - .5) * 45,
           dy: (random(i + 91) - .5) * 30,
-          radius: 1.5 + random(i + 92) * 2
+          radius: 2.5 + random(i + 92) * 2
         });
       }
     }
