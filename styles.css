@@ -22,7 +22,6 @@ h1, h2, h3, p, figure { margin: 0; }
 .container { width: min(1160px, calc(100% - 2 * var(--gutter))); margin-inline: auto; }
 .skip-link { position: fixed; z-index: 10; top: 12px; left: 12px; padding: 12px; background: white; transform: translateY(-150%); }
 .skip-link:focus { transform: translateY(0); }
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .site-header {
   position: sticky;
@@ -71,16 +70,18 @@ h1, h2, h3, p, figure { margin: 0; }
 .hero h1 { font-weight: 735; }
 .title-main {
   display: block;
-  font-size: clamp(40px, 5.4vw, 78px);
+  font-size: clamp(30px, 4.65vw, 66px);
   letter-spacing: -.062em;
-  line-height: .99;
+  line-height: 1.1;
+  white-space: nowrap;
 }
-.title-main > span { display: block; color: #536a42; }
+.title-main > span { color: #536a42; }
 .gaussian-title {
+  display: inline-block;
   position: relative;
   isolation: isolate;
-  margin-top: 8px;
-  padding-block: 18px 12px;
+  vertical-align: baseline;
+  white-space: nowrap;
   line-height: 1.05;
 }
 .gaussian-title-label {
@@ -96,9 +97,9 @@ h1, h2, h3, p, figure { margin: 0; }
 .gaussian-canvas {
   position: absolute;
   z-index: -1;
-  inset: -48px 0;
-  width: 100%;
-  height: calc(100% + 96px);
+  inset: -12px -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 24px);
   pointer-events: none;
 }
 .gaussian-title.splats-ready .gaussian-title-label {
@@ -290,9 +291,8 @@ h1, h2, h3, p, figure { margin: 0; }
   .site-header nav a { font-size: 12px; }
   .brand { gap: 6px; font-size: 13px; }
   .brand-mark { width: 25px; height: 25px; border-radius: 7px; }
-  .title-main { letter-spacing: -.057em; line-height: 1.04; text-wrap: balance; }
+  .title-main { font-size: clamp(30px, 5.8vw, 40px); letter-spacing: -.057em; line-height: 1.15; text-wrap: balance; white-space: normal; }
   .hero { width: calc(100% - 32px); padding-bottom: 24px; }
-  .gaussian-title { margin-top: 8px; padding-block: 12px 100px; }
   .button { gap: 7px; padding-inline: 11px; font-size: 12px; white-space: nowrap; }
   .comparison-image { aspect-ratio: 1.55; border-radius: 12px; }
   .comparison-image[data-view='stone'], .comparison-image[data-view='foliage'] { --photo-size: auto 165%; }
@@ -319,7 +319,7 @@ h1, h2, h3, p, figure { margin: 0; }
 
 @media (max-width: 345px) {
   .brand > span:last-child { display: none; }
-  .title-main { font-size: 36px; }
+  .title-main { font-size: 28px; }
 }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
