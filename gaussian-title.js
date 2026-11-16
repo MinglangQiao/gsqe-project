@@ -24,6 +24,7 @@
 
   let particles = [];
   let floaters = [];
+  let healthyText = null;
   let width = 0;
   let height = 0;
   let frame = 0;
@@ -32,7 +33,7 @@
   let progress = 0;
   let initialized = false;
   let hiddenAt = 0;
-  const duration = 5800;
+  const duration = 3500;
   const pointer = { x: 0, y: 0 };
   const random = seed => {
     const n = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
@@ -41,6 +42,19 @@
   const smooth = (from, to, value) => {
     const t = Math.max(0, Math.min(1, (value - from) / (to - from)));
     return t * t * (3 - 2 * t);
+  };
+  // Spatially coherent confidence: some surfaces are already reconstructed well.
+  const damageAt = (x, y) => {
+    const cellX = x / (width < 600 ? 35 : 57);
+    const cellY = y / (width < 600 ? 23 : 31);
+    const ix = Math.floor(cellX);
+    const iy = Math.floor(cellY);
+    const tx = smooth(0, 1, cellX - ix);
+    const ty = smooth(0, 1, cellY - iy);
+    const mix = (a, b, t) => a + (b - a) * t;
+    const a = mix(random(ix + iy * 79 + 27), random(ix + 1 + iy * 79 + 27), tx);
+    const b = mix(random(ix + (iy + 1) * 79 + 27), random(ix + 1 + (iy + 1) * 79 + 27), tx);
+    return smooth(.42, .64, mix(a, b, ty));
   };
 
   function splat(x, y, radius, ratio, angle, color, opacity) {
@@ -63,32 +77,40 @@
     }
     lastFrame = now;
     progress = motion.matches ? 1 : Math.min(1, (now - started) / duration);
-    const repair = smooth(.15, .92, progress);
+    const repair = smooth(.08, .96, progress);
     const damage = 1 - repair;
     const precision = smooth(.58, 1, repair);
     const textOpacity = smooth(.72, 1, repair) * .91;
     const opacity = 1 - precision * .58;
     heading.style.setProperty('--type-opacity', motion.matches ? 1 : textOpacity);
-    heading.dataset.reconstruction = progress >= 1 ? 'restored' : repair < .08 ? 'sparse' : repair < .72 ? 'repairing' : 'refining';
+    heading.dataset.reconstruction = progress >= 1 ? 'restored' : repair < .08 ? 'partial' : repair < .72 ? 'repairing' : 'refining';
     context.clearRect(0, 0, width, height);
+    // Keep confident regions sharp from the first frame; only damaged regions move.
+    if (healthyText) {
+      context.globalAlpha = Math.max(0, .91 - textOpacity);
+      context.drawImage(healthyText, 0, 0, width, height);
+      context.globalAlpha = 1;
+    }
 
     for (const p of particles) {
       const presence = p.birth === 0 ? 1 : smooth(p.birth, Math.min(1, p.birth + .18), repair);
       if (presence < .01) continue;
-      const displacement = damage * damage;
-      const depthShift = p.depth * (motion.matches ? 0 : .55 + damage * 2);
+      const localDamage = damage * p.damage;
+      const displacement = damage * damage * p.damage;
+      const depthShift = p.depth * (motion.matches ? 0 : .4 + localDamage);
       const x = p.x + (p.fragmentX + p.jitterX) * displacement + pointer.x * depthShift;
       const y = p.y + (p.fragmentY + p.jitterY) * displacement + pointer.y * depthShift * .6;
-      const radius = p.radius * (1 + damage * (1.7 + p.depth * 1.3));
-      const angle = p.angle * damage + p.tangent * repair;
-      splat(x, y, radius, .72 - damage * .36, angle, p.color,
-        presence * opacity * (.69 + p.depth * .24));
+      const radius = p.radius * (1 + localDamage * (.9 + p.depth * 1.2));
+      const angle = p.angle * localDamage + p.tangent * (1 - localDamage);
+      const texture = 1 - damage * .85 * (1 - p.damage);
+      splat(x, y, radius, .72 - localDamage * .25, angle, p.color,
+        presence * opacity * texture * (.69 + p.depth * .24));
     }
 
     // Detached floaters and duplicated fragments disappear as support improves.
     for (const p of floaters) {
       splat(p.x + p.dx * damage, p.y + p.dy * damage,
-        p.radius * (1 + damage), .36, p.angle, p.color, damage * damage * .48);
+        p.radius * (1 + damage), .36, p.angle, p.color, damage * damage * .32);
     }
     if (progress < 1) requestDraw();
   }
@@ -161,7 +183,21 @@
       }
     }
 
-    const pixels = brush.getImageData(0, 0, mask.width, mask.height).data;
+    const maskData = brush.getImageData(0, 0, mask.width, mask.height);
+    const pixels = maskData.data;
+    healthyText = document.createElement('canvas');
+    healthyText.width = mask.width;
+    healthyText.height = mask.height;
+    const healthyBrush = healthyText.getContext('2d');
+    const healthyData = healthyBrush.createImageData(mask.width, mask.height);
+    healthyData.data.set(pixels);
+    for (let y = 0; y < mask.height; y++) {
+      for (let x = 0; x < mask.width; x++) {
+        const alpha = (y * mask.width + x) * 4 + 3;
+        if (pixels[alpha]) healthyData.data[alpha] *= 1 - damageAt(x, y);
+      }
+    }
+    healthyBrush.putImageData(healthyData, 0, 0);
     const spacing = width < 600 ? 1.45 : 2;
     particles = [];
     floaters = [];
@@ -172,8 +208,8 @@
         if (pixels[pixel + 3] < 85) continue;
         const i = seed++;
         const tile = Math.floor(x / 19) + Math.floor(y / 13) * 79;
-        const missingPatch = random(tile + 31) > .59;
-        const initiallyVisible = !missingPatch && random(i + 8) < .44;
+        const localDamage = damageAt(x, y);
+        const initiallyVisible = localDamage < .12 || random(i + 8) < .78 - localDamage * .23;
         let color = 0;
         let distance = Infinity;
         palette.forEach((rgb, index) => {
@@ -181,22 +217,22 @@
           if (d < distance) { color = index; distance = d; }
         });
         const p = {
-          x, y, color,
-          birth: initiallyVisible ? 0 : .04 + random(tile + 19) * .42 + random(i + 14) * .28 + (missingPatch ? .12 : 0),
+          x, y, color, damage: localDamage,
+          birth: initiallyVisible ? 0 : .04 + random(tile + 19) * .36 + random(i + 14) * .24 + localDamage * .12,
           radius: spacing * (1.1 + random(i + 2) * .3),
           depth: random(i + 5),
           angle: (random(tile + 3) - .5) * Math.PI,
           tangent: random(i + 4) * .5,
-          fragmentX: (random(tile + 7) - .5) * 16,
-          fragmentY: (random(tile + 11) - .5) * 10,
-          jitterX: (random(i + 17) - .5) * 7,
-          jitterY: (random(i + 23) - .5) * 6
+          fragmentX: (random(tile + 7) - .5) * 10,
+          fragmentY: (random(tile + 11) - .5) * 7,
+          jitterX: (random(i + 17) - .5) * 4,
+          jitterY: (random(i + 23) - .5) * 4
         };
         particles.push(p);
-        if (random(i + 80) < .018) floaters.push({ ...p,
-          dx: (random(i + 90) - .5) * 70,
-          dy: (random(i + 91) - .5) * 48,
-          radius: 2 + random(i + 92) * 3
+        if (localDamage > .6 && random(i + 80) < .012) floaters.push({ ...p,
+          dx: (random(i + 90) - .5) * 45,
+          dy: (random(i + 91) - .5) * 30,
+          radius: 1.5 + random(i + 92) * 2
         });
       }
     }
