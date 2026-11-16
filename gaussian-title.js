@@ -50,6 +50,9 @@
   let progress = 0;
   let initialized = false;
   let hiddenAt = 0;
+  let hoverRegions = [];
+  let hovering = false;
+  let loopTimer = 0;
   const duration = 2500;
   const pointer = { x: 0, y: 0 };
   const random = seed => {
@@ -135,6 +138,7 @@
         p.radius * (1 + damage), .34 + p.depth * .18, p.angle, p.splatColor, damage * damage * .4, true);
     }
     if (progress < 1) requestDraw();
+    else queueReplay();
   }
 
   function requestDraw() {
@@ -151,8 +155,23 @@
     requestDraw();
   }
 
+  function clearReplay() {
+    clearTimeout(loopTimer);
+    loopTimer = 0;
+  }
+
+  function queueReplay() {
+    if (!hovering || motion.matches || document.hidden || loopTimer) return;
+    loopTimer = setTimeout(() => {
+      loopTimer = 0;
+      if (hovering && !document.hidden) restart();
+    }, 450);
+  }
+
   function rebuild() {
     const bounds = canvas.getBoundingClientRect();
+    const headingBounds = heading.getBoundingClientRect();
+    hoverRegions = [];
     width = bounds.width;
     height = bounds.height;
     if (!width || !height) return;
@@ -191,12 +210,15 @@
         const rect = range.getBoundingClientRect();
         let line = lines.at(-1);
         if (!line || Math.abs(line.top - rect.top) > 2) {
-          line = { text: '', left: rect.left, top: rect.top, height: rect.height };
+          line = { text: '', left: rect.left, right: rect.right, top: rect.top, height: rect.height };
           lines.push(line);
         }
         line.text += text.textContent[i];
+        line.right = rect.right;
       }
       for (const line of lines) {
+        hoverRegions.push({ left: line.left - headingBounds.left, right: line.right - headingBounds.left,
+          top: line.top - headingBounds.top, bottom: line.top + line.height - headingBounds.top });
         const metrics = brush.measureText(line.text);
         const ascent = metrics.fontBoundingBoxAscent ?? parseFloat(style.fontSize) * .9;
         const descent = metrics.fontBoundingBoxDescent ?? parseFloat(style.fontSize) * .24;
@@ -270,30 +292,43 @@
     requestDraw();
   }
 
-  heading.addEventListener('pointerenter', event => {
-    if (event.pointerType !== 'touch') restart();
-  });
-  heading.addEventListener('click', restart);
-  heading.addEventListener('pointermove', event => {
+  function trackPointer(event) {
     if (motion.matches || event.pointerType === 'touch') return;
     const box = heading.getBoundingClientRect();
-    pointer.x = (event.clientX - box.left) / box.width * 2 - 1;
-    pointer.y = (event.clientY - box.top) / box.height * 2 - 1;
+    const x = event.clientX - box.left;
+    const y = event.clientY - box.top;
+    const overText = hoverRegions.some(region => x >= region.left && x <= region.right && y >= region.top && y <= region.bottom);
+    if (overText !== hovering) {
+      hovering = overText;
+      if (hovering) restart();
+      else clearReplay();
+    }
+    pointer.x = x / box.width * 2 - 1;
+    pointer.y = y / box.height * 2 - 1;
     requestDraw();
-  });
+  }
+  heading.addEventListener('pointerenter', trackPointer);
+  heading.addEventListener('pointermove', trackPointer);
   heading.addEventListener('pointerleave', () => {
+    hovering = false;
+    clearReplay();
     pointer.x = pointer.y = 0;
     requestDraw();
   });
   motion.addEventListener('change', () => {
     if (motion.matches) {
+      hovering = false;
+      clearReplay();
       progress = 1;
       started = performance.now() - duration;
     }
     requestDraw();
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) hiddenAt = performance.now();
+    if (document.hidden) {
+      hiddenAt = performance.now();
+      clearReplay();
+    }
     else {
       if (started !== null && hiddenAt) started += performance.now() - hiddenAt;
       hiddenAt = 0;
